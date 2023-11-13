@@ -1,0 +1,16 @@
+{
+  "name": "driver.openai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "keywords": ["ai_so:plugin"],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "openai-api": "^1.3.1"
+  }
+}
