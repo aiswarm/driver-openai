@@ -1,16 +1,21 @@
 {
-  "name": "driver.openai",
+  "name": "@aiswarm/driver-openai",
   "version": "1.0.0",
-  "description": "",
+  "description": "A plugin for the AI Swarm that uses OpenAI's API to generate text.",
   "main": "index.js",
   "type": "module",
   "keywords": ["ai_so:plugin"],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "echo \"No start script\" && exit 1",
+    "test": "c8 ava test/*.js -w"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Ravi Gairola <mallox@pyxzl.net",
+  "license": "MIT",
   "dependencies": {
     "openai-api": "^1.3.1"
+  },
+  "devDependencies": {
+    "ava": "^5.3.1",
+    "c8": "^8.0.1"
   }
 }
