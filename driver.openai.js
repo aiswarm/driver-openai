@@ -77,7 +77,7 @@ export default class OpenAIDriver {
     return OpenAIDriver.#assistants[name];
   }
 
-  async instruct(prompt) {
+  async instruct(name, prompt) {
     return 'Stub Response from Driver'
     // TODO: send prompt to this.#thread and return response
     // TODO: instead of a response maybe we should have a streaming response interface. Gotta see when we play with the API.
