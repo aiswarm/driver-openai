@@ -10,25 +10,27 @@ import OpenAI from 'openai-api'
  * @implements {Driver}
  */
 export default class OpenAIDriver {
-  static #assistants = {};
-  #thread;
-  #config;
-  #openai;
-  #api;
+  static #assistants = {}
+  #thread
+  #config
+  #openai
+  #api
+  #agentName
 
   /**
    * Creates a new OpenAI driver.
    * @param {API} api The API object that allows to interact with the system.
-   * @param {Agent} agent The agent that will use this driver instance.
-   * @param {OpenAIConfig} agent.config The configuration object for this driver.
+   * @param {string} name The name of the agent for which this driver is running.
+   * @param {OpenAIConfig} config The configuration object for this driver.
    */
-  constructor(api, agent) {
+  constructor(api, name, config) {
     this.#api = api
-    this.#config = agent.config
-    this.#openai = new OpenAI(agent.config.apiKey)
-    this.#initialize(agent).catch(api.log.error)
-    api.log.info('Created OpenAI driver for agent', agent.name)
-    api.log.trace('OpenAI driver config:', agent.config)
+    this.#agentName = name
+    this.#config = config
+    this.#openai = new OpenAI(config.apiKey)
+    this.#initialize()
+    api.log.info('Created OpenAI driver for agent', name)
+    api.log.trace('OpenAI driver config:', config)
   }
 
   /**
@@ -50,9 +52,9 @@ export default class OpenAIDriver {
 
   /**
    * Creates the assistant specified by the configuration, or established connection with an existing agent.
-   * @param {Agent} agent The agent for which this driver is running.
+   * Note that the api doesn't know about the agent yet when the driver is created so trying to get it here will fail.
    */
-  async #initialize(agent) {
+  #initialize() {
     // Communication between agents can be done in individual threads, a single shared thread, or any combination of the two. this could allow configuration of complex interactions between agents. For now, we just isolate everyone for simplicity’s sake.
     // if individual thread:
     // Create a new thread for this agent
@@ -69,7 +71,7 @@ export default class OpenAIDriver {
       this.#api.log.info('Random generated message from the agent nr ' + id)
       this.#api.comms.emit(
         'all',
-        agent.name,
+        this.#agentName,
         'Random generated message from the agent nr ' + id
       )
     }, 5000)
