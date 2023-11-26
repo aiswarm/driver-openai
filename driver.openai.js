@@ -66,22 +66,6 @@ export default class OpenAIDriver {
     // {
     // get assistant with name and add to this thread
     // }
-
-    clearInterval(OpenAIDriver.#interval)
-    OpenAIDriver.#interval = setInterval(() => {
-      const fromCandidates = Object.keys(this.#api.agents.all())
-      const from =
-        fromCandidates[Math.floor(Math.random() * fromCandidates.length)]
-      const toCandidates = [
-        ...Object.keys(this.#api.groups.all()),
-        ...Object.keys(this.#api.agents.all()).filter((name) => name !== from),
-      ]
-      const to = toCandidates[Math.floor(Math.random() * toCandidates.length)]
-      const content = `Message from ${from} to ${to}`
-      const message = this.#api.comms.createMessage(to, from, content)
-      this.#api.comms.emit(message)
-      this.#api.log.info(message.toString())
-    }, 5000)
   }
 
   /**
@@ -100,15 +84,9 @@ export default class OpenAIDriver {
 
   /**
    * Instructs the agent with the given name.
-   * @param {string|Message} name
-   * @param {string} prompt
-   * @return {Promise<string>}
+   * @param {Message} message
    */
-  async instruct(name, prompt) {
-    if (typeof name == this.#api.comms.Message) {
-      console.log('Message', name.toString())
-    }
-    return 'Stub Response from Driver'
+  async instruct(message) {
     // TODO: send prompt to this.#thread and return response
     // TODO: instead of a response maybe we should have a streaming response interface. Gotta see when we play with the API.
   }
