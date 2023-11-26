@@ -11,6 +11,7 @@ import OpenAI from 'openai-api'
  */
 export default class OpenAIDriver {
   static #assistants = {}
+  static #interval
   #thread
   #config
   #openai
@@ -59,21 +60,27 @@ export default class OpenAIDriver {
     // if individual thread:
     // Create a new thread for this agent
     // if global thread:
-    // if thread doesn't exist create it
+    // if thread doesn't exist add it
     // if group thread:
     // for each group we're member of:
     // {
     // get assistant with name and add to this thread
     // }
 
-    setInterval(() => {
-      let id = Date.now()
-      this.#api.log.info('Random generated message from the agent nr ' + id)
-      this.#api.comms.emit(
-        'all',
-        this.#agentName,
-        'Random generated message from the agent nr ' + id
-      )
+    clearInterval(OpenAIDriver.#interval)
+    OpenAIDriver.#interval = setInterval(() => {
+      const fromCandidates = Object.keys(this.#api.agents.all())
+      const from =
+        fromCandidates[Math.floor(Math.random() * fromCandidates.length)]
+      const toCandidates = [
+        ...Object.keys(this.#api.groups.all()),
+        ...Object.keys(this.#api.agents.all()).filter((name) => name !== from),
+      ]
+      const to = toCandidates[Math.floor(Math.random() * toCandidates.length)]
+      const content = `Message from ${from} to ${to}`
+      const message = this.#api.comms.createMessage(to, from, content)
+      this.#api.comms.emit(message)
+      this.#api.log.info(message.toString())
     }, 5000)
   }
 
@@ -85,7 +92,7 @@ export default class OpenAIDriver {
    */
   async #getAssistant(name, config) {
     if (!this.#assistants[name]) {
-      // TODO: create assistant with name and config
+      // TODO: add assistant with name and config
       OpenAIDriver.#assistants[name] = { to: 'do' }
     }
     return OpenAIDriver.#assistants[name]
