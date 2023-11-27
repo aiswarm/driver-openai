@@ -74,10 +74,11 @@ export default class OpenAIDriver {
    * @param {OpenAIConfig} config The configuration object for this assistant if it needs to be created, otherwise it will be ignored.
    * @return {Promise<Object>} OpenAI assistant object.
    */
+  // eslint-disable-next-line no-unused-vars
   async #getAssistant(name, config) {
     if (!this.#assistants[name]) {
       // TODO: add assistant with name and config
-      OpenAIDriver.#assistants[name] = { to: 'do' }
+      OpenAIDriver.#assistants[name] = {to: 'do'}
     }
     return OpenAIDriver.#assistants[name]
   }
@@ -91,7 +92,9 @@ export default class OpenAIDriver {
     // TODO: instead of a response maybe we should have a streaming response interface. Gotta see when we play with the API.
   }
 
-  pause() {}
+  pause() {
+  }
 
-  resume() {}
+  resume() {
+  }
 }

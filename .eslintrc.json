@@ -37,7 +37,7 @@
       "warn"
     ],
     "no-console": [
-      "off"
+      "error"
     ]
   }
 }
