@@ -87,6 +87,7 @@ export default class OpenAIDriver {
    * Instructs the agent with the given name.
    * @param {Message} message
    */
+  // eslint-disable-next-line no-unused-vars
   async instruct(message) {
     // TODO: send prompt to this.#thread and return response
     // TODO: instead of a response maybe we should have a streaming response interface. Gotta see when we play with the API.
