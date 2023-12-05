@@ -61,7 +61,7 @@ export default class Run extends EventEmitter {
         type: message.type.toString()
       }
     })
-    this.#api.log.debug('Created OpenAI message', oaiMessage, oaiMessage.content[0].text.value) //trace
+    this.#api.log.trace('Created OpenAI message', oaiMessage, oaiMessage.content[0].text.value)
   }
 
   /**
@@ -76,7 +76,7 @@ export default class Run extends EventEmitter {
     this.#run = await this.#openai.beta.threads.runs.create(this.#threadId, {
       assistant_id: this.#assistantId
     })
-    this.#api.log.debug('Created OpenAI run', this.#run)//trace
+    this.#api.log.trace('Created OpenAI run', this.#run)
 
     this.#interval = setInterval(() => this.#poll(), 5000)
   }
@@ -89,11 +89,11 @@ export default class Run extends EventEmitter {
     try {
       const runResult = await this.#openai.beta.threads.runs.retrieve(this.#threadId, this.#run.id)
       this.#status = runResult.status
-      this.#api.log.debug(`OpenAI run ${this.#run.id} for agent ${this.#agentName} is ${runResult.status}`)//trace
+      this.#api.log.trace(`OpenAI run ${this.#run.id} for agent ${this.#agentName} is ${runResult.status}`)
       switch (runResult.status) {
-        //case 'queued':
-        //case 'in_progress':
-        //case 'cancelling':
+          //case 'queued':
+          //case 'in_progress':
+          //case 'cancelling':
       case 'requires_action':
         this.#onActionRequired(runResult)
         break
@@ -151,7 +151,7 @@ export default class Run extends EventEmitter {
   async #onComplete() {
     clearInterval(this.#interval)
     const messages = await this.#getMessagesFromLastRun()
-    this.#api.log.debug('Run result:', messages)//trace
+    this.#api.log.trace('Run result:', messages)
     this.emit('complete', messages)
   }
 
@@ -173,7 +173,7 @@ export default class Run extends EventEmitter {
       }
 
       if (oaiMessage.created_at < runCreateAt) {
-        this.#api.log.debug('Skipping sent message', oaiMessage) //trace
+        this.#api.log.trace('Skipping sent message', oaiMessage)
         continue
       }
 

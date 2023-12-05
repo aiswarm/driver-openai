@@ -39,7 +39,24 @@ export default class OpenAIDriver {
     this.#openai = new OpenAI({apiKey: config.driver.apiKey})
     this.#asyncConstructor(api, name, config, instructions).catch(api.log.error)
     api.log.debug('Created OpenAI driver for agent', name)
-    api.log.debug('OpenAI driver config:', config.driver) //trace
+    api.log.trace('OpenAI driver config:', {...config.driver, apiKey: '***'})
+  }
+
+  /**
+   * Returns the type of the driver which is 'openai'.
+   * @override
+   * @return {string}
+   */
+  get type() {
+    return 'openai'
+  }
+
+  /**
+   * Returns the configuration object for this driver.
+   * @return {OpenAIConfig}
+   */
+  get config() {
+    return this.#config.driver
   }
 
   /**
@@ -69,30 +86,13 @@ export default class OpenAIDriver {
   }
 
   /**
-   * Returns the type of the driver which is 'openai'.
-   * @override
-   * @return {string}
-   */
-  get type() {
-    return 'openai'
-  }
-
-  /**
-   * Returns the configuration object for this driver.
-   * @return {OpenAIConfig}
-   */
-  get config() {
-    return this.#config.driver
-  }
-
-  /**
    * Instructs the agent with the given name.
    * @param {Message} message
    */
   async instruct(message) {
     if (this.#run || !this.#available) {
       this.#messageQueue.push(message)
-      this.#api.log.debug('OpenAI driver for agent', this.#agentName, 'is running, queueing message', message)
+      this.#api.log.debug('OpenAI driver for agent', this.#agentName, 'is running, queueing message', message.toString())
       return
     }
     this.#run = new Run({
@@ -110,7 +110,7 @@ export default class OpenAIDriver {
       }
     })
     this.#run.on('complete', messages => {
-      this.#api.log.debug('OpenAI run complete with messages', messages) //trace
+      this.#api.log.trace('OpenAI run complete with messages', messages)
       messages.forEach(message => this.#api.comms.emit(message))
       this.#run = null
       if (this.#messageQueue.length) {
