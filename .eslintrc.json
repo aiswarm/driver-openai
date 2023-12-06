@@ -13,6 +13,22 @@
     "sourceType": "module"
   },
   "rules": {
+    "multiline-comment-style": [
+      "error",
+      "starred-block"
+    ],
+    "no-lonely-if": "error",
+    "comma-dangle": [
+      "error",
+      "never"
+    ],
+    "comma-spacing": [
+      "error",
+      {
+        "before": false,
+        "after": true
+      }
+    ],
     "indent": [
       "error",
       2
@@ -32,6 +48,10 @@
     "semi-style": [
       "error",
       "last"
+    ],
+    "curly": [
+      "error",
+      "all"
     ],
     "no-unused-vars": [
       "warn"

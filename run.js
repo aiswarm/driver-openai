@@ -91,9 +91,11 @@ export default class Run extends EventEmitter {
       this.#status = runResult.status
       this.#api.log.debug(`OpenAI run ${this.#run.id} for agent ${this.#agentName} is ${runResult.status}`)
       switch (runResult.status) {
-          //case 'queued':
-          //case 'in_progress':
-          //case 'cancelling':
+      /*
+       * case 'queued':
+       * case 'in_progress':
+       * case 'cancelling':
+       */
       case 'requires_action':
         this.#onActionRequired(runResult)
         break

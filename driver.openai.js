@@ -51,23 +51,6 @@ export default class OpenAIDriver {
   }
 
   /**
-   * Returns the type of the driver which is 'openai'.
-   * @override
-   * @return {string}
-   */
-  get type() {
-    return 'openai'
-  }
-
-  /**
-   * Returns the configuration object for this driver.
-   * @return {OpenAIConfig}
-   */
-  get config() {
-    return this.#config.driver
-  }
-
-  /**
    * Runs the asynchronous code of the constructor
    * @param {API} api
    * @param {string} name
@@ -91,6 +74,23 @@ export default class OpenAIDriver {
     if (this.#messageQueue.length) {
       process.nextTick(() => this.instruct(this.#messageQueue.shift())) // For some reason the driver thinks it's not available when it is, so we need to wait a tick before instructing
     }
+  }
+
+  /**
+   * Returns the type of the driver which is 'openai'.
+   * @override
+   * @return {string}
+   */
+  get type() {
+    return 'openai'
+  }
+
+  /**
+   * Returns the configuration object for this driver.
+   * @return {OpenAIConfig}
+   */
+  get config() {
+    return this.#config.driver
   }
 
   /**
