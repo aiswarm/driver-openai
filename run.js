@@ -89,7 +89,7 @@ export default class Run extends EventEmitter {
     try {
       const runResult = await this.#openai.beta.threads.runs.retrieve(this.#threadId, this.#run.id)
       this.#status = runResult.status
-      this.#api.log.trace(`OpenAI run ${this.#run.id} for agent ${this.#agentName} is ${runResult.status}`)
+      this.#api.log.debug(`OpenAI run ${this.#run.id} for agent ${this.#agentName} is ${runResult.status}`)
       switch (runResult.status) {
           //case 'queued':
           //case 'in_progress':

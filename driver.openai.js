@@ -9,6 +9,13 @@ import Run from './run.js'
  * @property {boolean} keepThread Whether to keep the thread alive after the process exits. By default, its deleted.
  */
 
+const DEFAULT_CONFIG = {
+  apiKey: process.env.OPENAI_API_KEY,
+  model: 'gpt-4-1106-preview',
+  keepAssistant: false,
+  keepThread: false
+}
+
 /**
  * This is the driver for the OpenAI API.
  * @implements {Driver}
@@ -36,6 +43,7 @@ export default class OpenAIDriver {
     this.#api = api
     this.#agentName = name
     this.#config = config
+    this.#config.driver = {...DEFAULT_CONFIG, ...config.driver}
     this.#openai = new OpenAI({apiKey: config.driver.apiKey})
     this.#asyncConstructor(api, name, config, instructions).catch(api.log.error)
     api.log.debug('Created OpenAI driver for agent', name)
