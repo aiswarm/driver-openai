@@ -14,33 +14,12 @@ const DEFAULT_CONFIG = {
   model: 'gpt-4-1106-preview',
   keepAssistant: false,
   keepThread: false,
-  skills: [{
-    type: 'retrieval'
-  }, {
-    type:'code_interpreter'
-  }, {
-    type: 'function',
-    function: {
-      name: 'get_current_time',
-      description: 'Gets the current time',
-      parameters: {
-        type: 'object',
-        properties: {
-          format: {
-            type: 'string',
-            description: 'The format of the time to return, defaults to 12h',
-            enum: [ '12h', '24h' ]
-          }
-        }
-      },
-      required: []
-    }
-  }]
+  skills: []
 }
 
 /**
  * This is the driver for the OpenAI API.
- * @implements {Driver}
+ * @implements {AgentDriver}
  */
 export default class OpenAIDriver {
   #config
@@ -67,6 +46,7 @@ export default class OpenAIDriver {
     this.#config = config
     this.#config.driver = {...DEFAULT_CONFIG, ...config.driver}
     this.#openai = new OpenAI({apiKey: config.driver.apiKey})
+    this.#parseSkillConfig()
     this.#asyncConstructor(api, name, config, instructions).catch(api.log.error)
     api.log.debug('Created OpenAI driver for agent', name)
     api.log.trace('OpenAI driver config:', {...config.driver, apiKey: '***'})
@@ -81,15 +61,15 @@ export default class OpenAIDriver {
    * @param {string} instructions
    */
   async #asyncConstructor(api, name, config, instructions) {
-    const tmpConfig = {
+    const assistantConfig = {
       name,
       instructions,
       model: config.driver.model,
       tools: config.driver.skills
     }
 
-    this.#assistant = await this.#openai.beta.assistants.create(tmpConfig)
-    this.#api.log.debug('Created OpenAI assistant', this.#assistant.id, 'with config', tmpConfig)
+    this.#assistant = await this.#openai.beta.assistants.create(assistantConfig)
+    this.#api.log.debug('Created OpenAI assistant', this.#assistant.id, 'with config', assistantConfig)
     process.on('exit', () => this.#cleanup(this.#assistant))
 
     this.#thread = await this.#openai.beta.threads.create()
@@ -233,5 +213,29 @@ export default class OpenAIDriver {
         this.#api.log.error('Failed to delete OpenAI assistant', assistant.id, e)
       }
     }
+  }
+
+  #parseSkillConfig() {
+    const parsedSkills = []
+    for (const skillName of this.#config.skills) {
+      if (skillName === 'retrieval' || skillName === 'code_interpreter') {
+        parsedSkills.push({ type: skillName })
+        continue
+      }
+      const skill = this.#api.skills.get(skillName)
+      parsedSkills.push({
+        type: 'function',
+        function: {
+          name: 'getTimeAndDate',
+          description: skill.description,
+          parameters: {
+            type: 'object',
+            properties: skill.parameters
+          },
+          required: skill.required
+        }
+      })
+    }
+    this.#config.driver.skills = parsedSkills
   }
 }

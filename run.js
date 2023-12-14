@@ -11,7 +11,6 @@ export default class Run extends EventEmitter {
   #openai
   #threadId
   #assistantId
-  #tools
   #run
   #interval
   #agentName
@@ -98,7 +97,7 @@ export default class Run extends EventEmitter {
        * case 'cancelling':
        */
       case 'requires_action':
-        this.#onActionRequired(runResult)
+        await this.#onActionRequired(runResult)
         break
       case 'cancelled':
         this.#onCancel(runResult)
@@ -211,7 +210,7 @@ export default class Run extends EventEmitter {
     this.emit('cancelled')
   }
 
-  #onActionRequired(runResult) {
+  async #onActionRequired(runResult) {
     // TODO handle functions and skills
     this.#api.log.debug('OpenAI run requires action', runResult)
     const toolCalls = runResult.required_action.submit_tool_outputs.tool_calls
@@ -227,7 +226,7 @@ export default class Run extends EventEmitter {
       case 'function':
         tool_outputs.push({
           tool_call_id: toolCall.id,
-          output: this.#handleFunction(toolCall.function)
+          output: await this.#handleFunction(toolCall.function)
         })
         break
       default:
@@ -238,20 +237,9 @@ export default class Run extends EventEmitter {
     this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)
   }
 
-  #handleFunction(functionProperties) {
+  async #handleFunction(functionProperties) {
     const name = functionProperties.name
     const args = JSON.parse(functionProperties.arguments)
-    switch (name) {
-    case 'get_current_time':
-      return getCurrentTime(args)
-    }
+    return await this.#api.skills.execute(name, args, this.#agentName)
   }
-}
-
-function getCurrentTime({format = '24h'}) {
-  return new Date().toLocaleTimeString('en-US', {
-    hour12: format === '12h',
-    hour: format === '12h' ? 'numeric' : '2-digit',
-    minute: '2-digit'
-  })
 }
