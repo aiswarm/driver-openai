@@ -4,9 +4,7 @@
   "description": "A plugin for the AI Swarm that uses OpenAI's API to generate text.",
   "main": "index.js",
   "type": "module",
-  "keywords": [
-    "ai_so:plugin"
-  ],
+  "keywords": ["@aiswarm:plugin"],
   "scripts": {
     "start": "echo \"No start script\" && exit 1",
     "test": "jest --coverage test/"
