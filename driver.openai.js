@@ -13,7 +13,29 @@ const DEFAULT_CONFIG = {
   apiKey: process.env.OPENAI_API_KEY,
   model: 'gpt-4-1106-preview',
   keepAssistant: false,
-  keepThread: false
+  keepThread: false,
+  skills: [{
+    type: 'retrieval'
+  }, {
+    type:'code_interpreter'
+  }, {
+    type: 'function',
+    function: {
+      name: 'get_current_time',
+      description: 'Gets the current time',
+      parameters: {
+        type: 'object',
+        properties: {
+          format: {
+            type: 'string',
+            description: 'The format of the time to return, defaults to 12h',
+            enum: [ '12h', '24h' ]
+          }
+        }
+      },
+      required: []
+    }
+  }]
 }
 
 /**
@@ -59,14 +81,16 @@ export default class OpenAIDriver {
    * @param {string} instructions
    */
   async #asyncConstructor(api, name, config, instructions) {
-    const assistant = await this.#openai.beta.assistants.create({
+    const tmpConfig = {
       name,
       instructions,
-      tools: config.skills,
-      model: config.driver.model
-    })
-    this.#assistant = assistant
-    process.on('exit', () => this.#cleanup(assistant))
+      model: config.driver.model,
+      tools: config.driver.skills
+    }
+
+    this.#assistant = await this.#openai.beta.assistants.create(tmpConfig)
+    this.#api.log.debug('Created OpenAI assistant', this.#assistant.id, 'with config', tmpConfig)
+    process.on('exit', () => this.#cleanup(this.#assistant))
 
     this.#thread = await this.#openai.beta.threads.create()
     this.#available = true
@@ -94,6 +118,26 @@ export default class OpenAIDriver {
   }
 
   /**
+   * Returns the status of the driver.
+   * @return {string} The status of the driver. One of 'idle', 'busy', 'paused', 'error', or 'queued'.
+   */
+  get status() {
+    if (!this.#run) {
+      if (this.#messageQueue.length) {
+        return 'queued'
+      }
+      return 'idle'
+    }
+    if (this.#run.status === 'failed') {
+      return 'error'
+    }
+    if (this.#available) {
+      return 'busy'
+    }
+    return 'paused'
+  }
+
+  /**
    * Instructs the agent with the given name.
    * @param {Message} message
    */
@@ -112,6 +156,7 @@ export default class OpenAIDriver {
     })
     this.#run.on('error', e => {
       this.#api.log.error('OpenAI run error', e)
+      this.#api.log.debug(e.stack)
       this.#run = null
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())

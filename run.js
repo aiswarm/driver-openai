@@ -11,6 +11,7 @@ export default class Run extends EventEmitter {
   #openai
   #threadId
   #assistantId
+  #tools
   #run
   #interval
   #agentName
@@ -111,7 +112,7 @@ export default class Run extends EventEmitter {
         break
       }
     } catch (e) {
-      this.onError(e)
+      this.#onError(e)
     }
   }
 
@@ -213,5 +214,44 @@ export default class Run extends EventEmitter {
   #onActionRequired(runResult) {
     // TODO handle functions and skills
     this.#api.log.debug('OpenAI run requires action', runResult)
+    const toolCalls = runResult.required_action.submit_tool_outputs.tool_calls
+    if (toolCalls.length === 0) {
+      this.#api.log.warn('OpenAI run requires action but no tool calls found', runResult)
+      return
+    }
+
+    const tool_outputs = []
+    for (const toolCall of toolCalls) {
+      this.#api.log.debug('OpenAI run requires action for tool call', toolCall)
+      switch (toolCall.type) {
+      case 'function':
+        tool_outputs.push({
+          tool_call_id: toolCall.id,
+          output: this.#handleFunction(toolCall.function)
+        })
+        break
+      default:
+        this.#api.log.warn('OpenAI run requires action but tool call type is unknown', toolCall)
+      }
+    }
+    this.#openai.beta.threads.runs.submitToolOutputs(this.#threadId, this.#run.id, {tool_outputs})
+    this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)
   }
+
+  #handleFunction(functionProperties) {
+    const name = functionProperties.name
+    const args = JSON.parse(functionProperties.arguments)
+    switch (name) {
+    case 'get_current_time':
+      return getCurrentTime(args)
+    }
+  }
+}
+
+function getCurrentTime({format = '24h'}) {
+  return new Date().toLocaleTimeString('en-US', {
+    hour12: format === '12h',
+    hour: format === '12h' ? 'numeric' : '2-digit',
+    minute: '2-digit'
+  })
 }
