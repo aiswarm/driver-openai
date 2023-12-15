@@ -58,12 +58,12 @@ export default class OpenAIDriver {
    * @param {string} name
    * @param {AgentConfig} config
    * @param {OpenAIConfig} config.driver
-   * @param {string} instructions
    */
-  async #asyncConstructor(api, name, config, instructions) {
+  async #asyncConstructor(api, name, config) {
     const assistantConfig = {
       name,
-      instructions,
+      description: config.description,
+      instructions: config.instructions,
       model: config.driver.model,
       tools: config.driver.skills
     }
