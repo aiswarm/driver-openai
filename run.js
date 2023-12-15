@@ -211,7 +211,6 @@ export default class Run extends EventEmitter {
   }
 
   async #onActionRequired(runResult) {
-    // TODO handle functions and skills
     this.#api.log.debug('OpenAI run requires action', runResult)
     const toolCalls = runResult.required_action.submit_tool_outputs.tool_calls
     if (toolCalls.length === 0) {
