@@ -226,7 +226,7 @@ export default class Run extends EventEmitter {
       case 'function':
         tool_outputs.push({
           tool_call_id: toolCall.id,
-          output: await this.#handleFunction(toolCall.function)
+          output: JSON.stringify(await this.#handleFunction(toolCall.function))
         })
         break
       default:

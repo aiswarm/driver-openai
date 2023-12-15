@@ -226,7 +226,7 @@ export default class OpenAIDriver {
       parsedSkills.push({
         type: 'function',
         function: {
-          name: 'getTimeAndDate',
+          name: skillName,
           description: skill.description,
           parameters: {
             type: 'object',
