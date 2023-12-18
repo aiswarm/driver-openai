@@ -211,6 +211,10 @@ export default class Run extends EventEmitter {
   }
 
   async #onActionRequired(runResult) {
+    if (runResult.required_action.type !== 'submit_tool_outputs') {
+      this.#api.log.debug('OpenAI run requires action but action type is unknown', runResult)
+      return
+    }
     this.#api.log.debug('OpenAI run requires action', runResult)
     const toolCalls = runResult.required_action.submit_tool_outputs.tool_calls
     if (toolCalls.length === 0) {
@@ -233,8 +237,9 @@ export default class Run extends EventEmitter {
       }
     }
     this.#openai.beta.threads.runs.submitToolOutputs(this.#threadId, this.#run.id, {tool_outputs})
-    this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)
+    this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)``
   }
+
 
   async #handleFunction(functionProperties) {
     const name = functionProperties.name

@@ -230,9 +230,9 @@ export default class OpenAIDriver {
           description: skill.description,
           parameters: {
             type: 'object',
-            properties: skill.parameters
-          },
-          required: skill.required
+            properties: skill.parameters,
+            required: skill.required
+          }
         }
       })
     }
