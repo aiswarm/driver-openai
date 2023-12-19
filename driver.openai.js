@@ -13,8 +13,7 @@ const DEFAULT_CONFIG = {
   apiKey: process.env.OPENAI_API_KEY,
   model: 'gpt-4-1106-preview',
   keepAssistant: false,
-  keepThread: false,
-  skills: []
+  keepThread: false
 }
 
 /**

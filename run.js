@@ -236,8 +236,8 @@ export default class Run extends EventEmitter {
         this.#api.log.warn('OpenAI run requires action but tool call type is unknown', toolCall)
       }
     }
+    this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)
     this.#openai.beta.threads.runs.submitToolOutputs(this.#threadId, this.#run.id, {tool_outputs})
-    this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)``
   }
 
 
