@@ -181,7 +181,8 @@ export default class Run extends EventEmitter {
 
       for (const content of oaiMessage.content) {
         // TODO parse annotation from openAI text message and convert to html
-        messages.push(this.#api.comms.createMessage('user', this.#agentName, content.text.value))
+        const message = this.#api.comms.createMessage('user', this.#agentName, content.text.value)
+        messages.push(message)
       }
     }
     return messages

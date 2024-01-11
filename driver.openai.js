@@ -28,6 +28,7 @@ export default class OpenAIDriver {
   #assistant
   #thread
   #messageQueue = []
+  #messagesProcessing = []
   #run
   #available = false
 
@@ -123,9 +124,11 @@ export default class OpenAIDriver {
   async instruct(message) {
     if (this.#run || !this.#available) {
       this.#messageQueue.push(message)
+      message.status = 'queued'
       this.#api.log.debug('OpenAI driver for agent', this.#agentName, 'is running, queueing message', message.toString())
       return
     }
+    message.status = 'processing'
     this.#run = new Run({
       api: this.#api,
       openai: this.#openai,
@@ -137,13 +140,19 @@ export default class OpenAIDriver {
       this.#api.log.error('OpenAI run error', e)
       this.#api.log.debug(e.stack)
       this.#run = null
+      message.status = 'error'
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
       }
     })
     this.#run.on('complete', messages => {
       this.#api.log.trace('OpenAI run complete with messages', messages)
-      messages.forEach(message => this.#api.comms.emit(message))
+      messages.forEach(message => {
+        message.status = 'sent'
+        this.#api.comms.emit(message)
+      })
+      this.#messagesProcessing.forEach(message => message.status = 'received')
+      this.#messagesProcessing = []
       this.#run = null
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
@@ -155,7 +164,9 @@ export default class OpenAIDriver {
     })
 
     while (this.#messageQueue.length) {
-      await this.#run.addMessage(this.#messageQueue.shift())
+      const message = this.#messageQueue.shift()
+      this.#messagesProcessing.push(message)
+      await this.#run.addMessage(message)
     }
     await this.#run.addMessage(message)
     this.#run.start()
@@ -178,6 +189,10 @@ export default class OpenAIDriver {
     if (this.#messageQueue.length) {
       this.instruct(this.#messageQueue.shift())
     }
+  }
+
+  remove() {
+    this.#cleanup(this.#assistant).catch(this.#api.log.warn)
   }
 
   /**
