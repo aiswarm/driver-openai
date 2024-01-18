@@ -151,7 +151,7 @@ export default class OpenAIDriver {
     this.#run.on('complete', messages => {
       this.#api.log.trace('OpenAI run complete with messages', messages)
       messages.forEach(message => {
-        message.status = 'sent'
+        message.status = 'complete'
         this.#api.comms.emit(message)
       })
       this.#messagesProcessing.forEach(message => message.status = 'complete')
