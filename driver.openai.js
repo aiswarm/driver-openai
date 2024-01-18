@@ -129,6 +129,7 @@ export default class OpenAIDriver {
       return
     }
     message.status = 'processing'
+    this.#messagesProcessing.push(message)
     this.#run = new Run({
       api: this.#api,
       openai: this.#openai,
@@ -141,6 +142,8 @@ export default class OpenAIDriver {
       this.#api.log.debug(e.stack)
       this.#run = null
       message.status = 'error'
+      this.#messagesProcessing.forEach(message => message.status = 'error')
+      this.#messagesProcessing = []
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
       }
@@ -151,7 +154,7 @@ export default class OpenAIDriver {
         message.status = 'sent'
         this.#api.comms.emit(message)
       })
-      this.#messagesProcessing.forEach(message => message.status = 'received')
+      this.#messagesProcessing.forEach(message => message.status = 'complete')
       this.#messagesProcessing = []
       this.#run = null
       if (this.#messageQueue.length) {
@@ -160,11 +163,14 @@ export default class OpenAIDriver {
     })
     this.#run.on('cancelled', () => {
       this.#api.log.debug('OpenAI run cancelled')
+      this.#messagesProcessing.forEach(message => message.status = 'cancelled')
+      this.#messagesProcessing = []
       this.#run = null
     })
 
     while (this.#messageQueue.length) {
       const message = this.#messageQueue.shift()
+      message.status = 'processing'
       this.#messagesProcessing.push(message)
       await this.#run.addMessage(message)
     }
