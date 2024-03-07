@@ -50,9 +50,13 @@ export default class Run extends EventEmitter {
    * @param {Message} message
    */
   async addMessage(message) {
+    let messagePrefix = ''
+    if (message.source !== 'user') {
+      messagePrefix = `From ${message.source}: `
+    }
     const oaiMessage = await this.#openai.beta.threads.messages.create(this.#threadId, {
       role: 'user',
-      content: message.content,
+      content: messagePrefix + message.content,
       metadata: {
         source: message.source,
         target: message.target,
@@ -132,11 +136,11 @@ export default class Run extends EventEmitter {
   #onError(response) {
     clearInterval(this.#interval)
     if (response instanceof Error) {
-      this.emit('error', response.message)
-    } else if (!response.last_error) {
-      this.emit('error', response.last_error.message)
+      this.emit('error', response.message, response)
+    } else if (response.last_error) {
+      this.emit('error', response.last_error.message, response)
     } else {
-      this.emit('error', response)
+      this.emit('error', response, response)
     }
   }
 
@@ -245,6 +249,12 @@ export default class Run extends EventEmitter {
   async #handleFunction(functionProperties) {
     const name = functionProperties.name
     const args = JSON.parse(functionProperties.arguments)
-    return await this.#api.skills.execute(name, args, this.#agentName)
+    try {
+      return await this.#api.skills.execute(name, args, this.#agentName)
+    } catch (e) {
+      return {
+        error: e.message
+      }
+    }
   }
 }

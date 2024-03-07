@@ -11,7 +11,7 @@ import Run from './run.js'
 
 const DEFAULT_CONFIG = {
   apiKey: process.env.OPENAI_API_KEY,
-  model: 'gpt-4-1106-preview',
+  model: 'gpt-4-0125-preview',
   keepAssistant: false,
   keepThread: false
 }
@@ -31,23 +31,21 @@ export default class OpenAIDriver {
   #messagesProcessing = []
   #run
   #available = false
-
   /**
    * Creates a new OpenAI driver.
    * @param {API} api The API object that allows to interact with the system.
    * @param {string} name The name of the agent for which this driver is running.
    * @param {AgentConfig} config The configuration object for this driver.
    * @param {OpenAIConfig} config.driver The configuration object specific to OpenAI.
-   * @param {string} instructions The initial set of instructions to use for the assistant.
    */
-  constructor({api, name, config, instructions}) {
+  constructor({api, name, config}) {
     this.#api = api
     this.#agentName = name
     this.#config = config
     this.#config.driver = {...DEFAULT_CONFIG, ...config.driver}
     this.#openai = new OpenAI({apiKey: config.driver.apiKey})
     this.#parseSkillConfig()
-    this.#asyncConstructor(api, name, config, instructions).catch(api.log.error)
+    this.#asyncConstructor(api, name, config).catch(api.log.error)
     api.log.debug('Created OpenAI driver for agent', name)
     api.log.trace('OpenAI driver config:', {...config.driver, apiKey: '***'})
   }
@@ -137,8 +135,8 @@ export default class OpenAIDriver {
       assistantId: this.#assistant.id,
       agentName: this.#agentName
     })
-    this.#run.on('error', e => {
-      this.#api.log.error('OpenAI run error', e)
+    this.#run.on('error', (msg, e) => {
+      this.#api.log.error('OpenAI run error', msg, e)
       this.#api.log.debug(e.stack)
       this.#run = null
       message.status = 'error'
