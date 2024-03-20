@@ -1,6 +1,6 @@
 {
   "name": "@aiswarm/driver-openai",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A plugin for the AI Swarm that uses OpenAI's API to generate text.",
   "main": "index.js",
   "type": "module",
