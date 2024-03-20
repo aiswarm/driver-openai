@@ -11,7 +11,7 @@
     "start": "echo \"No start script\" && exit 1",
     "test": "jest --coverage test/"
   },
-  "author": "Ravi Gairola <mallox@pyxzl.net",
+  "author": "Ravi Gairola <mallox@pyxzl.net>",
   "license": "MIT",
   "dependencies": {
     "openai": "^4.20.1"
