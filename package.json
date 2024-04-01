@@ -14,13 +14,16 @@
   "author": "Ravi Gairola <mallox@pyxzl.net>",
   "license": "MIT",
   "dependencies": {
-    "openai": "^4.20.1"
+    "openai": "^4.31.0"
+  },
+  "peerDependencies": {
+    "@aiswarm/orchestrator": "^0.1.9"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.10",
-    "@babel/core": "^7.23.3",
-    "@babel/eslint-parser": "^7.23.3",
-    "@babel/preset-env": "^7.23.3",
+    "@babel/core": "^7.24.3",
+    "@babel/eslint-parser": "^7.24.1",
+    "@babel/preset-env": "^7.24.3",
+    "@types/jest": "^29.5.12",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0"
   }

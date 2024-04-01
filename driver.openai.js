@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import Run from './run.js'
+import Message from '@aiswarm/orchestrator/message.js'
 
 /**
  * @typedef {import('./api').DriverConfig} OpenAIConfig
@@ -122,11 +123,11 @@ export default class OpenAIDriver {
   async instruct(message) {
     if (this.#run || !this.#available) {
       this.#messageQueue.push(message)
-      message.status = 'queued'
+      message.status = Message.state.queued
       this.#api.log.debug('OpenAI driver for agent', this.#agentName, 'is running, queueing message', message.toString())
       return
     }
-    message.status = 'processing'
+    message.status = Message.state.processing
     this.#messagesProcessing.push(message)
     this.#run = new Run({
       api: this.#api,
@@ -139,8 +140,8 @@ export default class OpenAIDriver {
       this.#api.log.error('OpenAI run error', msg, e)
       this.#api.log.debug(e.stack)
       this.#run = null
-      message.status = 'error'
-      this.#messagesProcessing.forEach(message => message.status = 'error')
+      message.status = Message.state.error
+      this.#messagesProcessing.forEach(message => message.status = Message.state.error)
       this.#messagesProcessing = []
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
@@ -149,10 +150,10 @@ export default class OpenAIDriver {
     this.#run.on('complete', messages => {
       this.#api.log.trace('OpenAI run complete with messages', messages)
       messages.forEach(message => {
-        message.status = 'complete'
+        message.status = Message.state.complete
         this.#api.comms.emit(message)
       })
-      this.#messagesProcessing.forEach(message => message.status = 'complete')
+      this.#messagesProcessing.forEach(message => message.status = Message.state.complete)
       this.#messagesProcessing = []
       this.#run = null
       if (this.#messageQueue.length) {
@@ -161,14 +162,14 @@ export default class OpenAIDriver {
     })
     this.#run.on('cancelled', () => {
       this.#api.log.debug('OpenAI run cancelled')
-      this.#messagesProcessing.forEach(message => message.status = 'cancelled')
+      this.#messagesProcessing.forEach(message => message.status = Message.state.cancelled)
       this.#messagesProcessing = []
       this.#run = null
     })
 
     while (this.#messageQueue.length) {
       const message = this.#messageQueue.shift()
-      message.status = 'processing'
+      message.status = Message.state.processing
       this.#messagesProcessing.push(message)
       await this.#run.addMessage(message)
     }
