@@ -69,7 +69,11 @@ export default class OpenAIDriver {
 
     this.#assistant = await this.#openai.beta.assistants.create(assistantConfig)
     this.#api.log.debug('Created OpenAI assistant', this.#assistant.id, 'with config', assistantConfig)
-    process.on('exit', () => this.#cleanup(this.#assistant))
+    process.on('exit', async () => await this.#cleanup(this.#assistant))
+    process.on('SIGINT', async () => {
+      await this.#cleanup()
+      process.nextTick(() => process.exit())
+    })
 
     this.#thread = await this.#openai.beta.threads.create()
     this.#available = true
@@ -147,6 +151,9 @@ export default class OpenAIDriver {
         this.instruct(this.#messageQueue.shift())
       }
     })
+    this.#run.on('message', message => {
+      this.#api.emit('messageUpdated', message)
+    })
     this.#run.on('complete', messages => {
       this.#api.log.trace('OpenAI run complete with messages', messages)
       messages.forEach(message => {
@@ -202,22 +209,20 @@ export default class OpenAIDriver {
 
   /**
    * Cleans up the driver by stopping the run and deleting the thread and assistant.
-   * @param {Object} assistant The assistant object from the OpenAI API
-   * @param {string} assistant.id The id of the assistant
    */
-  async #cleanup(assistant) {
+  async #cleanup() {
     if (this.#run) {
       try {
-        this.#run.stop()
-        this.#api.log.debug('Stopped OpenAI run', this.#run.id)
+        await this.#run.stop()
+        this.#api.log.debug('Stopped current OpenAI run')
       } catch (e) {
-        this.#api.log.error('Failed to stop OpenAI run', this.#run.id, e)
+        this.#api.log.error('Failed to stop current OpenAI run', e)
       }
     }
 
     if (!this.#config.driver.keepThread) {
       try {
-        this.#openai.beta.threads.del(this.#thread.id)
+        await this.#openai.beta.threads.del(this.#thread.id)
         this.#api.log.debug('Deleted OpenAI thread', this.#thread.id)
       } catch (e) {
         this.#api.log.error('Failed to delete OpenAI thread', this.#thread.id, e)
@@ -226,12 +231,13 @@ export default class OpenAIDriver {
 
     if (!this.#config.driver.keepAssistant) {
       try {
-        this.#openai.beta.assistants.del(assistant.id)
-        this.#api.log.debug('Deleted OpenAI assistant', assistant.id)
+        await this.#openai.beta.assistants.del(this.#assistant.id)
+        this.#api.log.debug('Deleted OpenAI assistant', this.#assistant.id)
       } catch (e) {
-        this.#api.log.error('Failed to delete OpenAI assistant', assistant.id, e)
+        this.#api.log.error('Failed to delete OpenAI assistant', this.#assistant.id, e)
       }
     }
+    this.#run = null
   }
 
   #parseSkillConfig() {

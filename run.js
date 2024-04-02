@@ -11,10 +11,11 @@ export default class Run extends EventEmitter {
   #openai
   #threadId
   #assistantId
-  #run
-  #interval
+  #stream
+  #runId
   #agentName
   #status = 'queued'
+  #messages = []
 
   /**
    * Creates a new run
@@ -68,55 +69,78 @@ export default class Run extends EventEmitter {
     this.#api.log.trace('Created OpenAI message', oaiMessage, oaiMessage.content[0].text.value)
   }
 
-  /**
-   * Starts the run. Returns when the run is started.
-   */
   async start() {
-    if (this.#interval) {
-      this.#api.log.warn('Run already started')
-      return
-    }
-
-    this.#run = await this.#openai.beta.threads.runs.create(this.#threadId, {
-      assistant_id: this.#assistantId
+    this.#stream = await this.#openai.beta.threads.runs.create(this.#threadId, {
+      assistant_id: this.#assistantId,
+      stream: true
     })
-    this.#api.log.trace('Created OpenAI run', this.#run)
 
-    this.#interval = setInterval(() => this.#poll(), 5000)
+    await this.#process()
   }
 
-  /**
-   * Polls the server for the status of the run and handles the result
-   * @return {Promise<void>}
-   */
-  async #poll() {
-    try {
-      const runResult = await this.#openai.beta.threads.runs.retrieve(this.#threadId, this.#run.id)
-      this.#status = runResult.status
-      this.#api.log.debug(`OpenAI run ${this.#run.id} for agent ${this.#agentName} is ${runResult.status}`)
-      switch (runResult.status) {
-      /*
-       * case 'queued':
-       * case 'in_progress':
-       * case 'cancelling':
-       */
-      case 'requires_action':
-        await this.#onActionRequired(runResult)
+  async #process() {
+    let currentMessage
+    for await (const payload of this.#stream) {
+      switch(payload.event) {
+      case 'thread.run.created':
+        this.#runId = payload.data.id
         break
-      case 'cancelled':
-        this.#onCancel(runResult)
+      case 'thread.run.queued':
+      case 'thread.run.in_progress':
+      case 'thread.run.cancelling':
+      case 'thread.run.step.created':
+      case 'thread.run.step.in_progress':
+      case 'thread.run.step.delta':
+      case 'thread.run.step.completed':
+      case 'thread.run.step.failed':
+      case 'thread.run.step.cancelled':
+      case 'thread.run.step.expired':
+      case 'thread.message.incomplete':
+      case 'thread.message.in_progress':
+        this.#api.log.trace('Unhandled/Ignored Streaming Event: ', payload.event)
         break
-      case 'expired':
-      case 'failed':
-        this.#onError(runResult)
+      case 'thread.run.completed':
+        await this.#onComplete()
         break
-      case 'completed':
-        await this.#onComplete(runResult)
+      case 'thread.run.cancelled':
+        this.#onCancel()
         break
+      case 'thread.message.created':
+        currentMessage = this.#api.comms.createMessage('user', this.#agentName, '')
+        this.#messages.push(currentMessage)
+        break
+      case 'thread.message.delta':
+        if (payload.data.delta.content.length > 1) {
+          this.#api.log.warn('Unexpected content length', payload.data.delta.content)
+        }
+        if (!currentMessage) {
+          this.#api.log.error('Received message delta without a message')
+          break
+        }
+        currentMessage.append(payload.data.delta.content[0].text.value)
+        break
+      case 'thread.message.completed':
+        currentMessage = null
+        break
+      case 'thread.run.requires_action':
+        await this.#onActionRequired(payload.data)
+        break
+      case 'thread.run.failed':
+      case 'thread.run.expired':
+      case 'error':
+        this.#onError(payload.data)
+        return
+      case 'end':
+        await this.#onComplete()
+        return
+      default:
+        console.log('Event: ', payload)
       }
-    } catch (e) {
-      this.#onError(e)
     }
+  }
+
+  async stop() {
+    await this.#openai.beta.threads.runs.cancel(this.#threadId, this.#runId)
   }
 
   /**
@@ -134,7 +158,6 @@ export default class Run extends EventEmitter {
    * @fires Run#error
    */
   #onError(response) {
-    clearInterval(this.#interval)
     if (response instanceof Error) {
       this.emit('error', response.message, response)
     } else if (response.last_error) {
@@ -155,63 +178,13 @@ export default class Run extends EventEmitter {
    * Handles the completion of a run
    */
   async #onComplete() {
-    clearInterval(this.#interval)
-    const messages = await this.#getMessagesFromLastRun()
-    this.#api.log.trace('Run result:', messages)
-    this.emit('complete', messages)
+    this.#api.log.trace('Run result:', this.#messages)
+    this.emit('complete', this.#messages)
+    this.#messages = []
   }
 
-  /**
-   * Gets the messages from the last run.
-   * @return {Promise<*[]>}
-   */
-  async #getMessagesFromLastRun() {
-    const messages = []
-    const oaiMessages = await this.#openai.beta.threads.messages.list(this.#threadId, {
-      limit: 5, // get the last few messages in case the AI generated more than one
-      order: 'desc'
-    })
-
-    const runCreateAt = this.#run.created_at
-    for (const oaiMessage of oaiMessages.data) {
-      if (oaiMessage.role === 'user') {
-        continue
-      }
-
-      if (oaiMessage.created_at < runCreateAt) {
-        this.#api.log.trace('Skipping sent message', oaiMessage)
-        continue
-      }
-
-      for (const content of oaiMessage.content) {
-        // TODO parse annotation from openAI text message and convert to html
-        const message = this.#api.comms.createMessage('user', this.#agentName, content.text.value)
-        messages.push(message)
-      }
-    }
-    return messages
-  }
-
-  /**
-   * Stops the run. Returns when the run is stopped. Indirectly fires the cancel event when the request returns.
-   */
-  async stop() {
-    await this.#openai.beta.threads.runs.cancel(this.#threadId, this.#run.id)
-  }
-
-  /**
-   * Cancel event.
-   * @event Run#cancelled
-   * @type {object}
-   */
-
-  /**
-   * Handles the cancellation of a run.
-   * @fires Run#cancelled
-   */
   #onCancel() {
-    clearInterval(this.#interval)
-    this.#api.log.debug('Cancelled OpenAI run', this.#run.id)
+    this.#api.log.debug('Cancelled current OpenAI run')
     this.emit('cancelled')
   }
 
@@ -241,8 +214,9 @@ export default class Run extends EventEmitter {
         this.#api.log.warn('OpenAI run requires action but tool call type is unknown', toolCall)
       }
     }
-    this.#api.log.debug('Submitted tool outputs for OpenAI run', this.#run.id, tool_outputs)
-    this.#openai.beta.threads.runs.submitToolOutputs(this.#threadId, this.#run.id, {tool_outputs})
+    this.#stream = this.#openai.beta.threads.runs.submitToolOutputsStream(this.#threadId, runResult.id, {tool_outputs})
+    this.#api.log.debug('Submitted tool outputs for OpenAI run', runResult.id, tool_outputs)
+    await this.#process()
   }
 
 
