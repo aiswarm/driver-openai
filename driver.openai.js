@@ -12,7 +12,7 @@ import Message from '@aiswarm/orchestrator/message.js'
 
 const DEFAULT_CONFIG = {
   apiKey: process.env.OPENAI_API_KEY,
-  model: 'gpt-4-0125-preview',
+  model: 'gpt-4-turbo',
   keepAssistant: false,
   keepThread: false
 }
