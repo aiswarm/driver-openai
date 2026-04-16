@@ -1,2 +1,10 @@
+.DS_Store
+.history/
+.idea/
+.vscode/
 node_modules/
 coverage/
+dist/
+.env
+.env.*
+!.env.example
