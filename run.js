@@ -29,7 +29,7 @@ export default class Run extends EventEmitter {
    * @emits Run#cancelled
    * @throws {Error} if the run cannot be created, started, or any other error occurs with the API.
    */
-  constructor({api, openai, threadId, assistantId, agentName}) {
+  constructor({ api, openai, threadId, assistantId, agentName }) {
     super()
     this.#api = api
     this.#openai = openai
@@ -81,60 +81,60 @@ export default class Run extends EventEmitter {
   async #process() {
     let currentMessage
     for await (const payload of this.#stream) {
-      switch(payload.event) {
-      case 'thread.run.created':
-        this.#runId = payload.data.id
-        break
-      case 'thread.run.queued':
-      case 'thread.run.in_progress':
-      case 'thread.run.cancelling':
-      case 'thread.run.step.created':
-      case 'thread.run.step.in_progress':
-      case 'thread.run.step.delta':
-      case 'thread.run.step.completed':
-      case 'thread.run.step.failed':
-      case 'thread.run.step.cancelled':
-      case 'thread.run.step.expired':
-      case 'thread.message.incomplete':
-      case 'thread.message.in_progress':
-        this.#api.log.trace('Unhandled/Ignored Streaming Event: ', payload.event)
-        break
-      case 'thread.run.completed':
-        await this.#onComplete()
-        break
-      case 'thread.run.cancelled':
-        this.#onCancel()
-        break
-      case 'thread.message.created':
-        currentMessage = this.#api.comms.createMessage('user', this.#agentName, '')
-        this.#messages.push(currentMessage)
-        break
-      case 'thread.message.delta':
-        if (payload.data.delta.content.length > 1) {
-          this.#api.log.warn('Unexpected content length', payload.data.delta.content)
-        }
-        if (!currentMessage) {
-          this.#api.log.error('Received message delta without a message')
+      switch (payload.event) {
+        case 'thread.run.created':
+          this.#runId = payload.data.id
           break
-        }
-        currentMessage.append(payload.data.delta.content[0].text.value)
-        break
-      case 'thread.message.completed':
-        currentMessage = null
-        break
-      case 'thread.run.requires_action':
-        await this.#onActionRequired(payload.data)
-        break
-      case 'thread.run.failed':
-      case 'thread.run.expired':
-      case 'error':
-        this.#onError(payload.data)
-        return
-      case 'end':
-        await this.#onComplete()
-        return
-      default:
-        console.log('Event: ', payload)
+        case 'thread.run.queued':
+        case 'thread.run.in_progress':
+        case 'thread.run.cancelling':
+        case 'thread.run.step.created':
+        case 'thread.run.step.in_progress':
+        case 'thread.run.step.delta':
+        case 'thread.run.step.completed':
+        case 'thread.run.step.failed':
+        case 'thread.run.step.cancelled':
+        case 'thread.run.step.expired':
+        case 'thread.message.incomplete':
+        case 'thread.message.in_progress':
+          this.#api.log.trace('Unhandled/Ignored Streaming Event: ', payload.event)
+          break
+        case 'thread.run.completed':
+          await this.#onComplete()
+          break
+        case 'thread.run.cancelled':
+          this.#onCancel()
+          break
+        case 'thread.message.created':
+          currentMessage = this.#api.comms.createMessage('user', this.#agentName, '')
+          this.#messages.push(currentMessage)
+          break
+        case 'thread.message.delta':
+          if (payload.data.delta.content.length > 1) {
+            this.#api.log.warn('Unexpected content length', payload.data.delta.content)
+          }
+          if (!currentMessage) {
+            this.#api.log.error('Received message delta without a message')
+            break
+          }
+          currentMessage.append(payload.data.delta.content[0].text.value)
+          break
+        case 'thread.message.completed':
+          currentMessage = null
+          break
+        case 'thread.run.requires_action':
+          await this.#onActionRequired(payload.data)
+          break
+        case 'thread.run.failed':
+        case 'thread.run.expired':
+        case 'error':
+          this.#onError(payload.data)
+          return
+        case 'end':
+          await this.#onComplete()
+          return
+        default:
+          this.#api.log.trace('Unhandled OpenAI stream event', payload)
       }
     }
   }
@@ -204,21 +204,24 @@ export default class Run extends EventEmitter {
     for (const toolCall of toolCalls) {
       this.#api.log.debug('OpenAI run requires action for tool call', toolCall)
       switch (toolCall.type) {
-      case 'function':
-        tool_outputs.push({
-          tool_call_id: toolCall.id,
-          output: JSON.stringify(await this.#handleFunction(toolCall.function))
-        })
-        break
-      default:
-        this.#api.log.warn('OpenAI run requires action but tool call type is unknown', toolCall)
+        case 'function':
+          tool_outputs.push({
+            tool_call_id: toolCall.id,
+            output: JSON.stringify(await this.#handleFunction(toolCall.function))
+          })
+          break
+        default:
+          this.#api.log.warn('OpenAI run requires action but tool call type is unknown', toolCall)
       }
     }
-    this.#stream = this.#openai.beta.threads.runs.submitToolOutputsStream(this.#threadId, runResult.id, {tool_outputs})
+    this.#stream = this.#openai.beta.threads.runs.submitToolOutputsStream(
+      this.#threadId,
+      runResult.id,
+      { tool_outputs }
+    )
     this.#api.log.debug('Submitted tool outputs for OpenAI run', runResult.id, tool_outputs)
     await this.#process()
   }
-
 
   async #handleFunction(functionProperties) {
     const name = functionProperties.name

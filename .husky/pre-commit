@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -e
+
+# Lint + format staged files via lint-staged. Skip gracefully if not installed
+# locally (e.g. fresh clone before `npm install`).
+if [ -x node_modules/.bin/lint-staged ] || [ -x ../node_modules/.bin/lint-staged ]; then
+  npx --no -- lint-staged
+else
+  echo "[pre-commit] lint-staged not installed locally — skipping. Run 'npm install'."
+fi
+
+# Secret scan (only if ggshield is installed locally; no-op otherwise so the
+# hook stays usable for contributors who haven't set it up yet).
+if command -v ggshield >/dev/null 2>&1; then
+  ggshield secret scan pre-commit
+else
+  echo "[pre-commit] ggshield not installed — skipping local secret scan."
+  echo "[pre-commit] Install with: brew install gitguardian/tap/ggshield  (or: pipx install ggshield)"
+  echo "[pre-commit] Then run: ggshield auth login"
+fi

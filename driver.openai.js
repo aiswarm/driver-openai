@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
-import Run from './run.js'
 import Message from '@aiswarm/orchestrator/message.js'
+import Run from './run.js'
 
 /**
  * @typedef {import('./api').DriverConfig} OpenAIConfig
@@ -39,16 +39,16 @@ export default class OpenAIDriver {
    * @param {AgentConfig} config The configuration object for this driver.
    * @param {OpenAIConfig} config.driver The configuration object specific to OpenAI.
    */
-  constructor({api, name, config}) {
+  constructor({ api, name, config }) {
     this.#api = api
     this.#agentName = name
     this.#config = config
-    this.#config.driver = {...DEFAULT_CONFIG, ...config.driver}
-    this.#openai = new OpenAI({apiKey: config.driver.apiKey})
+    this.#config.driver = { ...DEFAULT_CONFIG, ...config.driver }
+    this.#openai = new OpenAI({ apiKey: config.driver.apiKey })
     this.#parseSkillConfig()
     this.#asyncConstructor(api, name, config).catch(api.log.error)
     api.log.debug('Created OpenAI driver for agent', name)
-    api.log.trace('OpenAI driver config:', {...config.driver, apiKey: '***'})
+    api.log.trace('OpenAI driver config:', { ...config.driver, apiKey: '***' })
   }
 
   /**
@@ -68,7 +68,12 @@ export default class OpenAIDriver {
     }
 
     this.#assistant = await this.#openai.beta.assistants.create(assistantConfig)
-    this.#api.log.debug('Created OpenAI assistant', this.#assistant.id, 'with config', assistantConfig)
+    this.#api.log.debug(
+      'Created OpenAI assistant',
+      this.#assistant.id,
+      'with config',
+      assistantConfig
+    )
     process.on('exit', async () => await this.#cleanup(this.#assistant))
     process.on('SIGINT', async () => {
       await this.#cleanup()
@@ -128,7 +133,12 @@ export default class OpenAIDriver {
     if (this.#run || !this.#available) {
       this.#messageQueue.push(message)
       message.status = Message.state.queued
-      this.#api.log.debug('OpenAI driver for agent', this.#agentName, 'is running, queueing message', message.toString())
+      this.#api.log.debug(
+        'OpenAI driver for agent',
+        this.#agentName,
+        'is running, queueing message',
+        message.toString()
+      )
       return
     }
     message.status = Message.state.processing
@@ -145,7 +155,7 @@ export default class OpenAIDriver {
       this.#api.log.debug(e.stack)
       this.#run = null
       message.status = Message.state.error
-      this.#messagesProcessing.forEach(message => message.status = Message.state.error)
+      this.#messagesProcessing.forEach(message => (message.status = Message.state.error))
       this.#messagesProcessing = []
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
@@ -160,7 +170,7 @@ export default class OpenAIDriver {
         message.status = Message.state.complete
         this.#api.comms.emit(message)
       })
-      this.#messagesProcessing.forEach(message => message.status = Message.state.complete)
+      this.#messagesProcessing.forEach(message => (message.status = Message.state.complete))
       this.#messagesProcessing = []
       this.#run = null
       if (this.#messageQueue.length) {
@@ -169,7 +179,7 @@ export default class OpenAIDriver {
     })
     this.#run.on('cancelled', () => {
       this.#api.log.debug('OpenAI run cancelled')
-      this.#messagesProcessing.forEach(message => message.status = Message.state.cancelled)
+      this.#messagesProcessing.forEach(message => (message.status = Message.state.cancelled))
       this.#messagesProcessing = []
       this.#run = null
     })
