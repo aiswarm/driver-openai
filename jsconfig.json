@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "lib": ["esnext"]
+  },
+  "include": ["*.js"],
+  "exclude": ["node_modules", "coverage", "dist"]
+}

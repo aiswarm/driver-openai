@@ -1,9 +1,13 @@
 import OpenAI from 'openai'
 import Message from '@aiswarm/orchestrator/message.js'
+import AgentDriver from '@aiswarm/orchestrator/agentDriver.js'
 import Run from './run.js'
 
+/** @typedef {import('@aiswarm/orchestrator/api.js').DriverConfig} DriverConfig */
+/** @typedef {import('@aiswarm/orchestrator/agentDriver.js').AgentDriverOptions} AgentDriverOptions */
+
 /**
- * @typedef {import('./api').DriverConfig} OpenAIConfig
+ * @typedef {DriverConfig} OpenAIConfig
  * @property {string} apiKey The API key to use for the OpenAI API.
  * @property {string} model The model to use for the OpenAI API.
  * @property {boolean} keepAssistant Whether to keep the assistant alive after the process exits. By default, its deleted.
@@ -21,8 +25,12 @@ const DEFAULT_CONFIG = {
  * This is the driver for the OpenAI API.
  * @implements {AgentDriver}
  */
-export default class OpenAIDriver {
-  #config
+export default class OpenAIDriver extends AgentDriver {
+  static type = 'openai'
+
+  #agentConfig
+  #driverConfig
+  #tools = []
   #api
   #openai
   #agentName
@@ -33,38 +41,32 @@ export default class OpenAIDriver {
   #run
   #available = false
   /**
-   * Creates a new OpenAI driver.
-   * @param {API} api The API object that allows to interact with the system.
-   * @param {string} name The name of the agent for which this driver is running.
-   * @param {AgentConfig} config The configuration object for this driver.
-   * @param {OpenAIConfig} config.driver The configuration object specific to OpenAI.
+   * @param {AgentDriverOptions} options
+   * @param {OpenAIConfig} options.driverConfig OpenAI-specific settings (apiKey, model, keepThread, keepAssistant).
    */
-  constructor({ api, name, config }) {
+  constructor({ api, name, agentConfig, driverConfig }) {
+    super()
     this.#api = api
     this.#agentName = name
-    this.#config = config
-    this.#config.driver = { ...DEFAULT_CONFIG, ...config.driver }
-    this.#openai = new OpenAI({ apiKey: config.driver.apiKey })
+    this.#agentConfig = agentConfig
+    this.#driverConfig = { ...DEFAULT_CONFIG, ...driverConfig }
+    this.#openai = new OpenAI({ apiKey: this.#driverConfig.apiKey })
     this.#parseSkillConfig()
-    this.#asyncConstructor(api, name, config).catch(api.log.error)
+    this.#asyncConstructor().catch(api.log.error)
     api.log.debug('Created OpenAI driver for agent', name)
-    api.log.trace('OpenAI driver config:', { ...config.driver, apiKey: '***' })
+    api.log.trace('OpenAI driver config:', { ...this.#driverConfig, apiKey: '***' })
   }
 
   /**
-   * Runs the asynchronous code of the constructor
-   * @param {API} api
-   * @param {string} name
-   * @param {AgentConfig} config
-   * @param {OpenAIConfig} config.driver
+   * Runs the asynchronous code of the constructor.
    */
-  async #asyncConstructor(api, name, config) {
+  async #asyncConstructor() {
     const assistantConfig = {
-      name,
-      description: config.description,
-      instructions: config.instructions,
-      model: config.driver.model,
-      tools: config.driver.skills
+      name: this.#agentName,
+      description: this.#agentConfig.description,
+      instructions: this.#agentConfig.instructions,
+      model: this.#driverConfig.model,
+      tools: this.#tools
     }
 
     this.#assistant = await this.#openai.beta.assistants.create(assistantConfig)
@@ -86,23 +88,6 @@ export default class OpenAIDriver {
     if (this.#messageQueue.length) {
       process.nextTick(() => this.instruct(this.#messageQueue.shift())) // For some reason the driver thinks it's not available when it is, so we need to wait a tick before instructing
     }
-  }
-
-  /**
-   * Returns the type of the driver which is 'openai'.
-   * @override
-   * @return {string}
-   */
-  get type() {
-    return 'openai'
-  }
-
-  /**
-   * Returns the configuration object for this driver.
-   * @return {OpenAIConfig}
-   */
-  get config() {
-    return this.#config.driver
   }
 
   /**
@@ -230,7 +215,7 @@ export default class OpenAIDriver {
       }
     }
 
-    if (!this.#config.driver.keepThread) {
+    if (!this.#driverConfig.keepThread) {
       try {
         await this.#openai.beta.threads.del(this.#thread.id)
         this.#api.log.debug('Deleted OpenAI thread', this.#thread.id)
@@ -239,7 +224,7 @@ export default class OpenAIDriver {
       }
     }
 
-    if (!this.#config.driver.keepAssistant) {
+    if (!this.#driverConfig.keepAssistant) {
       try {
         await this.#openai.beta.assistants.del(this.#assistant.id)
         this.#api.log.debug('Deleted OpenAI assistant', this.#assistant.id)
@@ -252,7 +237,7 @@ export default class OpenAIDriver {
 
   #parseSkillConfig() {
     const parsedSkills = []
-    for (const skillName of this.#config.skills) {
+    for (const skillName of this.#agentConfig.skills ?? []) {
       if (skillName === 'retrieval' || skillName === 'code_interpreter') {
         parsedSkills.push({ type: skillName })
         continue
@@ -271,6 +256,6 @@ export default class OpenAIDriver {
         }
       })
     }
-    this.#config.driver.skills = parsedSkills
+    this.#tools = parsedSkills
   }
 }
