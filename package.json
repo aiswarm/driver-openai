@@ -28,14 +28,14 @@
   "author": "Ravi Gairola <mallox@pyxzl.net>",
   "license": "MIT",
   "dependencies": {
-    "openai": "^4.31.0"
+    "openai": "^6.34.0"
   },
   "peerDependencies": {
     "@aiswarm/orchestrator": "^0.1.9"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.0",
-    "eslint": "^9.39.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.0",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^17.0.0",

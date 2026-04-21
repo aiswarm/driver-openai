@@ -217,7 +217,7 @@ export default class OpenAIDriver extends AgentDriver {
 
     if (!this.#driverConfig.keepThread) {
       try {
-        await this.#openai.beta.threads.del(this.#thread.id)
+        await this.#openai.beta.threads.delete(this.#thread.id)
         this.#api.log.debug('Deleted OpenAI thread', this.#thread.id)
       } catch (e) {
         this.#api.log.error('Failed to delete OpenAI thread', this.#thread.id, e)
@@ -226,7 +226,7 @@ export default class OpenAIDriver extends AgentDriver {
 
     if (!this.#driverConfig.keepAssistant) {
       try {
-        await this.#openai.beta.assistants.del(this.#assistant.id)
+        await this.#openai.beta.assistants.delete(this.#assistant.id)
         this.#api.log.debug('Deleted OpenAI assistant', this.#assistant.id)
       } catch (e) {
         this.#api.log.error('Failed to delete OpenAI assistant', this.#assistant.id, e)
