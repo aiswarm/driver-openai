@@ -1,6 +1,6 @@
 {
   "name": "@aiswarm/driver-openai",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "A plugin for the AI Swarm that uses OpenAI's API to generate text.",
   "main": "index.js",
   "type": "module",
@@ -31,12 +31,13 @@
     "openai": "^6.34.0"
   },
   "peerDependencies": {
-    "@aiswarm/orchestrator": "^0.1.9"
+    "@aiswarm/orchestrator": "^0.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^17.0.0",
     "husky": "^9.1.0",

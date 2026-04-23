@@ -21,9 +21,7 @@ export default [
     },
     settings: {
       'import/resolver': {
-        node: {
-          extensions: ['.js', '.mjs']
-        }
+        typescript: { project: './jsconfig.json' }
       }
     },
     rules: {
@@ -33,11 +31,7 @@ export default [
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'error',
       'import/extensions': ['error', 'ignorePackages', { js: 'always', mjs: 'always' }],
-      /*
-       * Local workspace deep-imports (e.g. '@aiswarm/orchestrator/message.js') don't resolve
-       * when CI installs from npm (no exports map). Disable to keep CI green.
-       */
-      'import/no-unresolved': 'off',
+      'import/no-unresolved': 'error',
       'import/order': ['warn', { 'newlines-between': 'never' }]
     }
   },

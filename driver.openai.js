@@ -3,7 +3,7 @@ import Message from '@aiswarm/orchestrator/message.js'
 import AgentDriver from '@aiswarm/orchestrator/agentDriver.js'
 import Run from './run.js'
 
-/** @typedef {import('@aiswarm/orchestrator/api.js').DriverConfig} DriverConfig */
+/** @typedef {import('@aiswarm/orchestrator/agentDriver.js').DriverConfig} DriverConfig */
 /** @typedef {import('@aiswarm/orchestrator/agentDriver.js').AgentDriverOptions} AgentDriverOptions */
 
 /**
