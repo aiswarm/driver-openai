@@ -227,7 +227,7 @@ export default class Run extends EventEmitter {
     const name = functionProperties.name
     const args = JSON.parse(functionProperties.arguments)
     try {
-      return await this.#api.skills.execute(name, args, this.#agentName)
+      return await this.#api.skills.invoke({ agentName: this.#agentName, name, args })
     } catch (e) {
       return {
         error: e.message

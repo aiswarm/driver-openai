@@ -84,6 +84,7 @@ export default class OpenAIDriver extends AgentDriver {
 
     this.#thread = await this.#openai.beta.threads.create()
     this.#available = true
+    this.status = 'idle'
 
     if (this.#messageQueue.length) {
       process.nextTick(() => this.instruct(this.#messageQueue.shift())) // For some reason the driver thinks it's not available when it is, so we need to wait a tick before instructing
@@ -91,23 +92,22 @@ export default class OpenAIDriver extends AgentDriver {
   }
 
   /**
-   * Returns the status of the driver.
-   * @return {string} The status of the driver. One of 'idle', 'busy', 'paused', 'error', or 'queued'.
+   * Advertises OpenAI Assistants v1 capabilities. Reasoning + audio + image input
+   * are not surfaced through the v1 Assistants API and are reported as false even
+   * if the underlying model supports them; the v2 Responses migration (PLAN bug 7)
+   * will revisit.
+   * @return {{streaming: boolean, tools: boolean, images: boolean, audio: boolean, reasoning: boolean, cache: boolean, parallelTools: boolean}}
    */
-  get status() {
-    if (!this.#run) {
-      if (this.#messageQueue.length) {
-        return 'queued'
-      }
-      return 'idle'
+  get capabilities() {
+    return {
+      streaming: false,
+      tools: true,
+      images: false,
+      audio: false,
+      reasoning: false,
+      cache: false,
+      parallelTools: true
     }
-    if (this.#run.status === 'failed') {
-      return 'error'
-    }
-    if (this.#available) {
-      return 'busy'
-    }
-    return 'paused'
   }
 
   /**
@@ -118,6 +118,7 @@ export default class OpenAIDriver extends AgentDriver {
     if (this.#run || !this.#available) {
       this.#messageQueue.push(message)
       message.status = Message.state.queued
+      this.status = 'queued'
       this.#api.log.debug(
         'OpenAI driver for agent',
         this.#agentName,
@@ -135,6 +136,7 @@ export default class OpenAIDriver extends AgentDriver {
       assistantId: this.#assistant.id,
       agentName: this.#agentName
     })
+    this.status = 'busy'
     this.#run.on('error', (msg, e) => {
       this.#api.log.error('OpenAI run error', msg, e)
       this.#api.log.debug(e.stack)
@@ -142,8 +144,11 @@ export default class OpenAIDriver extends AgentDriver {
       message.status = Message.state.error
       this.#messagesProcessing.forEach(message => (message.status = Message.state.error))
       this.#messagesProcessing = []
+      this.status = 'error'
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
+      } else {
+        this.status = this.#available ? 'idle' : 'paused'
       }
     })
     this.#run.on('message', message => {
@@ -160,6 +165,8 @@ export default class OpenAIDriver extends AgentDriver {
       this.#run = null
       if (this.#messageQueue.length) {
         this.instruct(this.#messageQueue.shift())
+      } else {
+        this.status = this.#available ? 'idle' : 'paused'
       }
     })
     this.#run.on('cancelled', () => {
@@ -167,6 +174,7 @@ export default class OpenAIDriver extends AgentDriver {
       this.#messagesProcessing.forEach(message => (message.status = Message.state.cancelled))
       this.#messagesProcessing = []
       this.#run = null
+      this.status = this.#available ? 'idle' : 'paused'
     })
 
     while (this.#messageQueue.length) {
@@ -185,6 +193,7 @@ export default class OpenAIDriver extends AgentDriver {
   pause() {
     this.#api.log.debug('Pausing OpenAI driver for agent', this.#agentName)
     this.#available = false
+    this.status = 'paused'
   }
 
   /**
@@ -195,6 +204,8 @@ export default class OpenAIDriver extends AgentDriver {
     this.#available = true
     if (this.#messageQueue.length) {
       this.instruct(this.#messageQueue.shift())
+    } else if (!this.#run) {
+      this.status = 'idle'
     }
   }
 
