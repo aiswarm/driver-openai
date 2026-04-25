@@ -1,5 +1,5 @@
 import js from '@eslint/js'
-import importPlugin from 'eslint-plugin-import'
+import { importX } from 'eslint-plugin-import-x'
 import prettierConfig from 'eslint-config-prettier'
 import globals from 'globals'
 
@@ -8,7 +8,7 @@ export default [
     ignores: ['node_modules/']
   },
   js.configs.recommended,
-  importPlugin.flatConfigs.recommended,
+  importX.flatConfigs.recommended,
   {
     files: ['**/*.{js,mjs}'],
     languageOptions: {
@@ -20,7 +20,7 @@ export default [
       }
     },
     settings: {
-      'import/resolver': {
+      'import-x/resolver': {
         typescript: { project: './jsconfig.json' }
       }
     },
@@ -30,9 +30,9 @@ export default [
       curly: ['error', 'all'],
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'error',
-      'import/extensions': ['error', 'ignorePackages', { js: 'always', mjs: 'always' }],
-      'import/no-unresolved': 'error',
-      'import/order': ['warn', { 'newlines-between': 'never' }]
+      'import-x/extensions': ['error', 'ignorePackages', { js: 'always', mjs: 'always' }],
+      'import-x/no-unresolved': 'error',
+      'import-x/order': ['warn', { 'newlines-between': 'never' }]
     }
   },
   prettierConfig
